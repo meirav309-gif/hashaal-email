@@ -1,0 +1,32 @@
+name: Send Hashaal Email
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 10:00 AM Israel time (summer UTC+3)
+  workflow_dispatch:      # Allow manual trigger from GitHub
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install requests Pillow playwright
+
+      - name: Install Playwright browser
+        run: playwright install chromium --with-deps
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Send email
+        run: node send_email_now.js

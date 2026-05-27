@@ -1,0 +1,4 @@
+*.processed.html
+tmp_email_*.html
+*.pdf
+__pycache__/
