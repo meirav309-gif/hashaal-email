@@ -2,7 +2,7 @@ name: Send Hashaal Email
 
 on:
   schedule:
-    - cron: '0 7 * * *'  # 10:00 AM Israel time (summer UTC+3)
+    - cron: '15 23 * * *'  # 2:15 AM Israel time (summer UTC+3)
   workflow_dispatch:      # Allow manual trigger from GitHub
 
 jobs:
