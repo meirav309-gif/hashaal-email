@@ -24,19 +24,86 @@ function httpsRequest(options, body) {
   });
 }
 
+function downloadBuffer(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      const chunks = [];
+      res.on('data', chunk => chunks.push(chunk));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    }).on('error', reject);
+  });
+}
+
+const smooveUrlCache = new Map();
+
+async function uploadImageToSmoove(airtableUrl) {
+  if (smooveUrlCache.has(airtableUrl)) return smooveUrlCache.get(airtableUrl);
+  try {
+    const imageData = await downloadBuffer(airtableUrl);
+    const boundary = '----Boundary' + Date.now();
+    const ext = airtableUrl.split('?')[0].split('.').pop().toLowerCase() || 'jpg';
+    const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+    const filename = `img_${Date.now()}.${ext}`;
+    const header = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mime}\r\n\r\n`);
+    const footer = Buffer.from(`\r\n--${boundary}--\r\n`);
+    const body = Buffer.concat([header, imageData, footer]);
+
+    const res = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'studio-api.admin.smoove.io',
+        path: '/upload',
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length }
+      }, (r) => {
+        let d = ''; r.on('data', c => d += c); r.on('end', () => resolve(d));
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+
+    const json = JSON.parse(res);
+    const smooveUrl = json.fileUrl;
+    smooveUrlCache.set(airtableUrl, smooveUrl);
+    return smooveUrl;
+  } catch (e) {
+    console.error('  העלאת תמונה נכשלה:', e.message);
+    return airtableUrl; // fallback to original
+  }
+}
+
+async function uploadRecordImages(records, { maxFeedback = 3, maxWp = 6 } = {}) {
+  const urlMap = new Map();
+  const allUrls = [];
+  for (const r of records) {
+    const f = r.fields;
+    for (const img of (f['פידבקים תמונה '] || []).slice(0, maxFeedback)) if (img.url) allUrls.push(img.url);
+    for (const img of (f['תמונות לוואטסאפ'] || []).slice(0, maxWp)) if (img.url) allUrls.push(img.url);
+  }
+  const unique = [...new Set(allUrls)];
+  console.log(`מעלה ${unique.length} תמונות ל-smoove...`);
+  for (const url of unique) {
+    const smooveUrl = await uploadImageToSmoove(url);
+    urlMap.set(url, smooveUrl);
+    process.stdout.write('.');
+  }
+  console.log('');
+  return urlMap;
+}
+
 function imgTag(url) {
   return `<img src="${url}" style="max-width:560px;width:100%;display:block;margin-bottom:8px;border-radius:8px;" />`;
 }
 
-function buildProductHtml(record, { maxFeedback = 3, maxWp = 6 } = {}) {
+function buildProductHtml(record, urlMap, { maxFeedback = 3, maxWp = 6 } = {}) {
   const f = record.fields;
   const feedbackImgs = f['פידבקים תמונה '] || [];
   const wpImgs = f['תמונות לוואטסאפ'] || [];
   const description = (f['תיאור'] || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   let html = `<div dir="rtl" style="margin-bottom:28px;padding-bottom:28px;border-bottom:2px solid #f0f0f0;font-family:Arial,sans-serif;">`;
-  for (const img of feedbackImgs.slice(0, maxFeedback)) if (img.url) html += imgTag(img.url);
-  for (const img of wpImgs.slice(0, maxWp)) if (img.url) html += imgTag(img.url);
+  for (const img of feedbackImgs.slice(0, maxFeedback)) if (img.url) html += imgTag(urlMap.get(img.url) || img.url);
+  for (const img of wpImgs.slice(0, maxWp)) if (img.url) html += imgTag(urlMap.get(img.url) || img.url);
   html += `<p style="white-space:pre-line;font-size:14px;line-height:1.7;color:#333;margin:12px 0 0;">${description}</p>`;
   html += `</div>`;
   return html;
@@ -111,13 +178,16 @@ async function run() {
     return;
   }
 
-  // 2. Build email HTML (full images for email)
-  const productsHtml = records.map(r => buildProductHtml(r)).join('');
+  // 2. Upload images to smoove for permanent URLs
+  const urlMap = await uploadRecordImages(records);
+
+  // 3. Build email HTML (full images for email)
+  const productsHtml = records.map(r => buildProductHtml(r, urlMap)).join('');
   const emailBody = buildEmailHtml(productsHtml);
 
-  // 3. Generate PDF — compact version (2 images per product to stay under 10MB)
+  // 4. Generate PDF — compact version (2 images per product to stay under 10MB)
   console.log('יוצר PDF ומעלה...');
-  const pdfProductsHtml = records.map(r => buildProductHtml(r, { maxFeedback: 1, maxWp: 1 })).join('');
+  const pdfProductsHtml = records.map(r => buildProductHtml(r, urlMap, { maxFeedback: 1, maxWp: 1 })).join('');
   const pdfHtml = buildEmailHtml(pdfProductsHtml);
   let pdfUrl = null;
   try {
@@ -128,7 +198,7 @@ async function run() {
     // Continue without attachment
   }
 
-  // 4. Create smoove campaign
+  // 5. Create smoove campaign
   console.log('יוצר קמפיין ב-smoove...');
   const campaignData = {
     name: `השלל החם ברשת - ${today}`,
@@ -161,7 +231,7 @@ async function run() {
   }
   console.log('Campaign ID:', campaignId);
 
-  // 5. Send campaign
+  // 6. Send campaign
   console.log('שולח קמפיין...');
   const sendPayload = '{}';
   const sendRes = await httpsRequest({
@@ -177,7 +247,7 @@ async function run() {
 
   console.log('שליחה status:', sendRes.status, JSON.stringify(sendRes.body).substring(0, 200));
 
-  // 6. Update Airtable — set send date
+  // 7. Update Airtable — set send date
   console.log('מעדכן תאריך שליחה ב-Airtable...');
   for (const record of records) {
     const patchPayload = JSON.stringify({ fields: { 'תאריך שליחה במייל': today } });
