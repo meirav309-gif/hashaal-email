@@ -1,9 +1,7 @@
 name: Send Hashaal Email
 
 on:
-  schedule:
-    - cron: '0 7 * * *'  # backup: 10:00 AM Israel time (summer UTC+3)
-  workflow_dispatch:      # Allow manual trigger from GitHub
+  workflow_dispatch:      # Triggered by Make daily at 10:00 AM Israel time
 
 jobs:
   send-email:
