@@ -3,8 +3,8 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const AIRTABLE_TOKEN = 'REDACTED-AIRTABLE-TOKEN';
-const SMOOVE_TOKEN = 'REDACTED-SMOOVE-TOKEN';
+const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
+const SMOOVE_TOKEN = process.env.SMOOVE_TOKEN;
 
 const filterFormula = `AND(NOT({קוד מוצר}="סטוריז"),NOT(SEARCH("פספוסי קניות",{קוד מוצר})),NOT(SEARCH("שבוע טוב",{קוד מוצר})),IS_AFTER({תאריך עדכון אחרון },"2026-04-20"),OR(NOT({תאריך שליחה במייל}),IS_BEFORE({תאריך שליחה במייל},{תאריך עדכון אחרון })))`;
 

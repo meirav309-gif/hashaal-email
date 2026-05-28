@@ -28,3 +28,6 @@ jobs:
 
       - name: Send email
         run: node send_email_now.js
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+          SMOOVE_TOKEN: ${{ secrets.SMOOVE_TOKEN }}
