@@ -6,7 +6,7 @@ const path = require('path');
 const AIRTABLE_TOKEN = 'REDACTED-AIRTABLE-TOKEN';
 const SMOOVE_TOKEN = 'REDACTED-SMOOVE-TOKEN';
 
-const filterFormula = `AND(NOT({קוד מוצר}="סטוריז"),NOT({קוד מוצר}="פספוסי קניות"),NOT({קוד מוצר}="שבוע טוב"),IS_AFTER({תאריך עדכון אחרון },"2026-04-20"),OR(NOT({תאריך שליחה במייל}),IS_BEFORE({תאריך שליחה במייל},{תאריך עדכון אחרון })))`;
+const filterFormula = `AND(NOT({קוד מוצר}="סטוריז"),NOT(SEARCH("פספוסי קניות",{קוד מוצר})),NOT(SEARCH("שבוע טוב",{קוד מוצר})),IS_AFTER({תאריך עדכון אחרון },"2026-04-20"),OR(NOT({תאריך שליחה במייל}),IS_BEFORE({תאריך שליחה במייל},{תאריך עדכון אחרון })))`;
 
 function httpsRequest(options, body) {
   return new Promise((resolve, reject) => {
