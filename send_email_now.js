@@ -202,7 +202,7 @@ async function run() {
   console.log('יוצר קמפיין ב-smoove...');
   const campaignData = {
     name: `השלל החם ברשת - ${today}`,
-    toListsById: [833622],
+    toMembersByEmail: ['meirav309@gmail.com'],
     subject: '🔥 השלל החם ברשת - מוצרים של היום',
     body: emailBody
   };
