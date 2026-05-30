@@ -151,7 +151,38 @@ function generateAndUploadPdf(htmlContent) {
   });
 }
 
+function isYomTovToday() {
+  // Israel timezone
+  const israelNow = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  const y = israelNow.getUTCFullYear();
+  const m = String(israelNow.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(israelNow.getUTCDate()).padStart(2, '0');
+  const today = `${y}-${m}-${d}`;
+  const url = `/hebcal?cfg=json&v=1&maj=on&i=on&start=${today}&end=${today}`;
+
+  return new Promise((resolve) => {
+    https.get({ hostname: 'www.hebcal.com', path: url }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const items = (JSON.parse(data).items) || [];
+          const yt = items.find(it => it.yomtov === true);
+          resolve(yt ? yt.title : null);
+        } catch (e) { resolve(null); }
+      });
+    }).on('error', () => resolve(null));
+  });
+}
+
 async function run() {
+  // Check for Yom Tov (Israeli observance) and skip if today
+  const yomTov = await isYomTovToday();
+  if (yomTov) {
+    console.log(`היום ${yomTov} — לא שולחים. יציאה.`);
+    return;
+  }
+
   const today = new Date().toISOString().split('T')[0];
 
   // 1. Fetch Airtable records
