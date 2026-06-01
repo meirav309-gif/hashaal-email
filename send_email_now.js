@@ -124,8 +124,6 @@ function buildEmailHtml(productsHtml) {
     productsHtml +
     `<div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;text-align:center;">` +
     `<a href="${SIGNUP_URL}" style="display:inline-block;background:${BTN_COLOR};color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:bold;margin-bottom:16px;">הצטרפות לרשימת התפוצה</a>` +
-    `<br/>` +
-    `<a href="${UNSUB_URL}" style="color:#aaa;font-size:12px;text-decoration:underline;">הסר אותי מהרשימה</a>` +
     `</div></body></html>`;
 }
 
@@ -185,26 +183,13 @@ async function run() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  // 1. Fetch Airtable records — TODAY: 2 pinned + 10 regular
-  const PINNED_IDS = ['recg9UPRS0QZLXtmi', 'recsTcPwq2YzXc2Xd'];
+  // 1. Fetch Airtable records
   console.log('שולף מוצרים מ-Airtable...');
-
-  const pinnedRecs = [];
-  for (const id of PINNED_IDS) {
-    const r = await httpsRequest({
-      hostname: 'api.airtable.com',
-      path: `/v0/app0Y6aG3mPGuZZTI/tblGHPMhXKU7wQz6j/${id}`,
-      method: 'GET',
-      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
-    });
-    if (r.body && r.body.id) pinnedRecs.push(r.body);
-  }
-
   const qs = new URLSearchParams({
     filterByFormula: filterFormula,
     'sort[0][field]': 'תאריך עדכון אחרון ',
     'sort[0][direction]': 'asc',
-    maxRecords: '10'
+    maxRecords: '12'
   });
 
   const airtableRes = await httpsRequest({
@@ -214,9 +199,8 @@ async function run() {
     headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
   });
 
-  const regular = (airtableRes.body.records || []).filter(r => !PINNED_IDS.includes(r.id));
-  const records = [...pinnedRecs, ...regular];
-  console.log(`נמצאו ${records.length} מוצרים (${pinnedRecs.length} pinned + ${regular.length} regular)`);
+  const records = airtableRes.body.records || [];
+  console.log(`נמצאו ${records.length} מוצרים`);
 
   if (records.length === 0) {
     console.log('אין מוצרים לשליחה. יציאה.');
@@ -248,7 +232,7 @@ async function run() {
   const campaignData = {
     name: `השלל החם ברשת - ${today}`,
     toListsById: [833622],
-    subject: 'אתגר הקאשבק הגדול! אל תפספסו!',
+    subject: '🔥 השלל החם ברשת - מוצרים של היום',
     body: emailBody
   };
   if (pdfUrl) {
