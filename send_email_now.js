@@ -194,6 +194,15 @@ function isYomTovToday() {
 }
 
 async function run() {
+  // Skip evening sends after cashback promo ends (single daily send post-promo)
+  const israelNow = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  const todayIL = israelNow.toISOString().split('T')[0];
+  const hourIL = israelNow.getUTCHours();
+  if (todayIL > CASHBACK_END && hourIL >= 18) {
+    console.log(`המבצע הסתיים והשעה ${hourIL}:xx — מדלגים על שליחת ערב. יציאה.`);
+    return;
+  }
+
   // Check for Yom Tov (Israeli observance) and skip if today
   const yomTov = await isYomTovToday();
   if (yomTov) {
