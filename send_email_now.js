@@ -112,15 +112,35 @@ function buildProductHtml(record, urlMap, { maxFeedback = 3, maxWp = 6 } = {}) {
 const LOGO_URL   = 'https://content.vp4.me/shalal/Content/IMG_20230226_200201_169_590x590-r.jpg';
 const SIGNUP_URL = 'https://lp.vp4.me/oyz4';
 const BTN_COLOR  = '#D4746E';
-const UNSUB_URL  = 'https://portal.smoove.io/fg8sibajnajf9k8n5fnf/profile/unsubscribe';
+const CASHBACK_URL = 'https://s.click.aliexpress.com/e/_c3cNkFs1';
+const CASHBACK_END = '2026-06-10'; // promo ends June 10 at midnight (last send: June 10)
+const CASHBACK_SUBJECT = '🔥 התחיל מבצע קאשבק! 10 ימים של מוצרים חמים + כסף חזרה';
+const REGULAR_SUBJECT = '🔥 השלל החם ברשת - מוצרים של היום';
+
+function isCashbackPromoActive() {
+  const israelNow = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  const today = israelNow.toISOString().split('T')[0];
+  return today <= CASHBACK_END;
+}
+
+function cashbackBanner() {
+  return `<div style="background:#FFF4E5;border:1px solid #F5C97B;border-radius:10px;padding:16px 18px;margin-bottom:24px;text-align:right;line-height:1.7;font-size:14px;color:#5a3a00;">` +
+    `<p style="font-size:16px;font-weight:bold;margin:0 0 8px;color:#9C5500;">🔥 מבצע מיוחד — 10 ימי קאשבק!</p>` +
+    `<p style="margin:0 0 8px;">בימים הקרובים נשלח אלייכם <b>פעמיים ביום</b> (בוקר וערב) את המוצרים הכי שווים ברשת.</p>` +
+    `<p style="margin:0 0 10px;">אל תפספסו — המבצע מסתיים ב-10.6.</p>` +
+    `<a href="${CASHBACK_URL}" style="display:inline-block;background:#D4746E;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;">להצטרפות למבצע הקאשבק »</a>` +
+    `</div>`;
+}
 
 function buildEmailHtml(productsHtml) {
+  const banner = isCashbackPromoActive() ? cashbackBanner() : '';
   return `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"/></head>` +
     `<body style="font-family:Arial,sans-serif;direction:rtl;text-align:right;max-width:600px;margin:0 auto;padding:20px;background:#fff;">` +
     `<div style="text-align:center;margin-bottom:24px;">` +
     `<img src="${LOGO_URL}" style="max-width:280px;width:100%;border-radius:12px;display:block;margin:0 auto 14px;" />` +
     `<p style="font-size:18px;font-weight:bold;color:#222;margin:0;">✨ הפריטים הכי שווים ברשת ✨</p>` +
     `</div>` +
+    banner +
     productsHtml +
     `<div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;text-align:center;">` +
     `<a href="${SIGNUP_URL}" style="display:inline-block;background:${BTN_COLOR};color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:bold;margin-bottom:16px;">הצטרפות לרשימת התפוצה</a>` +
@@ -232,7 +252,7 @@ async function run() {
   const campaignData = {
     name: `השלל החם ברשת - ${today}`,
     toListsById: [833622],
-    subject: '🔥 השלל החם ברשת - מוצרים של היום',
+    subject: isCashbackPromoActive() ? CASHBACK_SUBJECT : REGULAR_SUBJECT,
     body: emailBody
   };
   if (pdfUrl) {
