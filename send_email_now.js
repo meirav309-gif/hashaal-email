@@ -185,13 +185,26 @@ async function run() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  // 1. Fetch Airtable records
+  // 1. Fetch Airtable records — TODAY: 2 pinned + 10 regular
+  const PINNED_IDS = ['recg9UPRS0QZLXtmi', 'recsTcPwq2YzXc2Xd'];
   console.log('שולף מוצרים מ-Airtable...');
+
+  const pinnedRecs = [];
+  for (const id of PINNED_IDS) {
+    const r = await httpsRequest({
+      hostname: 'api.airtable.com',
+      path: `/v0/app0Y6aG3mPGuZZTI/tblGHPMhXKU7wQz6j/${id}`,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
+    });
+    if (r.body && r.body.id) pinnedRecs.push(r.body);
+  }
+
   const qs = new URLSearchParams({
     filterByFormula: filterFormula,
     'sort[0][field]': 'תאריך עדכון אחרון ',
     'sort[0][direction]': 'asc',
-    maxRecords: '12'
+    maxRecords: '10'
   });
 
   const airtableRes = await httpsRequest({
@@ -201,8 +214,9 @@ async function run() {
     headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
   });
 
-  const records = airtableRes.body.records || [];
-  console.log(`נמצאו ${records.length} מוצרים`);
+  const regular = (airtableRes.body.records || []).filter(r => !PINNED_IDS.includes(r.id));
+  const records = [...pinnedRecs, ...regular];
+  console.log(`נמצאו ${records.length} מוצרים (${pinnedRecs.length} pinned + ${regular.length} regular)`);
 
   if (records.length === 0) {
     console.log('אין מוצרים לשליחה. יציאה.');
@@ -234,7 +248,7 @@ async function run() {
   const campaignData = {
     name: `השלל החם ברשת - ${today}`,
     toListsById: [833622],
-    subject: '🔥 השלל החם ברשת - מוצרים של היום',
+    subject: 'אתגר הקאשבק הגדול! אל תפספסו!',
     body: emailBody
   };
   if (pdfUrl) {
