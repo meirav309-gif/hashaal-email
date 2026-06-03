@@ -114,13 +114,27 @@ const SIGNUP_URL = 'https://lp.vp4.me/oyz4';
 const BTN_COLOR  = '#D4746E';
 const CASHBACK_URL = 'https://s.click.aliexpress.com/e/_c3cNkFs1';
 const CASHBACK_END = '2026-06-10'; // promo ends June 10 at midnight (last send: June 10)
-const CASHBACK_SUBJECT = '🔥 התחיל מבצע קאשבק! 10 ימים של מוצרים חמים + כסף חזרה';
+const CASHBACK_SUBJECT_MORNING = '🔥 התחיל מבצע קאשבק! 10 ימים של מוצרים חמים + כסף חזרה';
+const CASHBACK_SUBJECT_EVENING = '🌙 עוד מוצרים שווים לערב + קאשבק על כל קנייה';
 const REGULAR_SUBJECT = '🔥 השלל החם ברשת - מוצרים של היום';
+
+function israelHour() {
+  return new Date(Date.now() + 3 * 60 * 60 * 1000).getUTCHours();
+}
+
+function isEveningRun() {
+  return israelHour() >= 14;
+}
 
 function isCashbackPromoActive() {
   const israelNow = new Date(Date.now() + 3 * 60 * 60 * 1000);
   const today = israelNow.toISOString().split('T')[0];
   return today <= CASHBACK_END;
+}
+
+function currentSubject() {
+  if (!isCashbackPromoActive()) return REGULAR_SUBJECT;
+  return isEveningRun() ? CASHBACK_SUBJECT_EVENING : CASHBACK_SUBJECT_MORNING;
 }
 
 function cashbackBanner() {
@@ -261,7 +275,7 @@ async function run() {
   const campaignData = {
     name: `השלל החם ברשת - ${today}`,
     toListsById: [833622],
-    subject: isCashbackPromoActive() ? CASHBACK_SUBJECT : REGULAR_SUBJECT,
+    subject: currentSubject(),
     body: emailBody
   };
   if (pdfUrl) {
