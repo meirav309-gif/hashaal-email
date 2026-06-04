@@ -226,13 +226,18 @@ async function run() {
 
   const today = new Date().toISOString().split('T')[0];
 
+  // One-shot pin: include specific product in a specific send
+  const PIN_ONCE = { date: '2026-06-04', evening: true, id: 'recS2fXschmaKCB9W' };
+  const shouldPin = todayIL === PIN_ONCE.date && (PIN_ONCE.evening ? isEveningRun() : !isEveningRun());
+
   // 1. Fetch Airtable records
   console.log('שולף מוצרים מ-Airtable...');
+  const regularMax = shouldPin ? 11 : 12;
   const qs = new URLSearchParams({
     filterByFormula: filterFormula,
     'sort[0][field]': 'תאריך עדכון אחרון ',
     'sort[0][direction]': 'asc',
-    maxRecords: '12'
+    maxRecords: String(regularMax)
   });
 
   const airtableRes = await httpsRequest({
@@ -242,7 +247,21 @@ async function run() {
     headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
   });
 
-  const records = airtableRes.body.records || [];
+  let records = airtableRes.body.records || [];
+
+  if (shouldPin) {
+    const pinRes = await httpsRequest({
+      hostname: 'api.airtable.com',
+      path: `/v0/app0Y6aG3mPGuZZTI/tblGHPMhXKU7wQz6j/${PIN_ONCE.id}`,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
+    });
+    if (pinRes.body && pinRes.body.id) {
+      records = [pinRes.body, ...records.filter(r => r.id !== PIN_ONCE.id)];
+      console.log(`Pinned: ${pinRes.body.fields['קוד מוצר']}`);
+    }
+  }
+
   console.log(`נמצאו ${records.length} מוצרים`);
 
   if (records.length === 0) {
