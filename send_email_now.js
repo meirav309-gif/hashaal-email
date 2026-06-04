@@ -232,7 +232,7 @@ async function run() {
 
   // 1. Fetch Airtable records
   console.log('שולף מוצרים מ-Airtable...');
-  const regularMax = shouldPin ? 11 : 12;
+  const regularMax = shouldPin ? 17 : 18;
   const qs = new URLSearchParams({
     filterByFormula: filterFormula,
     'sort[0][field]': 'תאריך עדכון אחרון ',
