@@ -240,14 +240,19 @@ async function run() {
     maxRecords: String(regularMax)
   });
 
-  const airtableRes = await httpsRequest({
-    hostname: 'api.airtable.com',
-    path: `/v0/app0Y6aG3mPGuZZTI/tblGHPMhXKU7wQz6j?${qs}`,
-    method: 'GET',
-    headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
-  });
-
-  let records = airtableRes.body.records || [];
+  let records = [];
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const airtableRes = await httpsRequest({
+      hostname: 'api.airtable.com',
+      path: `/v0/app0Y6aG3mPGuZZTI/tblGHPMhXKU7wQz6j?${qs}`,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
+    });
+    records = airtableRes.body.records || [];
+    if (records.length > 0) break;
+    console.log(`ניסיון ${attempt}: 0 רשומות. ${attempt < 3 ? 'מנסה שוב בעוד 3 שניות...' : ''}`);
+    if (attempt < 3) await new Promise(r => setTimeout(r, 3000));
+  }
 
   if (shouldPin) {
     const pinRes = await httpsRequest({
