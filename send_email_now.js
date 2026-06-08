@@ -300,7 +300,8 @@ async function run() {
     name: `השלל החם ברשת - ${today}`,
     toListsById: [833622],
     subject: currentSubject(),
-    body: emailBody
+    body: emailBody,
+    customFromAddress: 'shalal.buy4you.co.il@send.vpcontact.com'
   };
   if (pdfUrl) {
     campaignData.campaignAttachments = [pdfUrl];
