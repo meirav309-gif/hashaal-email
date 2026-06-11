@@ -105,14 +105,19 @@ function imgTag(url) {
 const CASHBACK_BLOCK_RE = /רוצים לקבל קאשבק[^\n]*\n+https?:\/\/s\.click\.aliexpress\.com\/e\/_c3cNkFs1\n?/g;
 const CASHBACK_STRIP_UNTIL = new Date('2026-06-24T00:00:00Z');
 
+// WhatsApp group join block — strip permanently from every email body. The
+// block lives in Airtable descriptions (intro line + chat.whatsapp.com URL)
+// and stays there; we only hide it in the email.
+const WHATSAPP_GROUP_BLOCK_RE = /\n*לעוד מוצרים הצטרפו לקבוצה[^\n]*\n+https?:\/\/chat\.whatsapp\.com\/\S+/g;
+
 function buildProductHtml(record, urlMap, { maxFeedback = 3, maxWp = 6 } = {}) {
   const f = record.fields;
   const feedbackImgs = f['פידבקים תמונה '] || [];
   const wpImgs = f['תמונות לוואטסאפ'] || [];
   const stripCashback = new Date() < CASHBACK_STRIP_UNTIL;
-  const rawDesc = stripCashback
-    ? (f['תיאור'] || '').replace(CASHBACK_BLOCK_RE, '').trim()
-    : (f['תיאור'] || '');
+  let rawDesc = f['תיאור'] || '';
+  if (stripCashback) rawDesc = rawDesc.replace(CASHBACK_BLOCK_RE, '');
+  rawDesc = rawDesc.replace(WHATSAPP_GROUP_BLOCK_RE, '').trim();
   const description = rawDesc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   let html = `<div dir="rtl" style="margin-bottom:28px;padding-bottom:28px;border-bottom:2px solid #f0f0f0;font-family:Arial,sans-serif;">`;
