@@ -99,13 +99,20 @@ function imgTag(url) {
 // The block was stamped into every aliexpress draft until 2026-06-09; we strip
 // it at email-build time instead of editing Airtable (would bump 60+ rows of
 // תאריך עדכון אחרון and disrupt the daily queue ordering).
+// Self-disables on 2026-06-24 — by then the ~63 pending cashback records will
+// have all gone out (218 emails / ~36 per day). Past that date, the strip is a
+// no-op; the line below and this constant can be deleted in a later cleanup.
 const CASHBACK_BLOCK_RE = /רוצים לקבל קאשבק[^\n]*\n+https?:\/\/s\.click\.aliexpress\.com\/e\/_c3cNkFs1\n?/g;
+const CASHBACK_STRIP_UNTIL = new Date('2026-06-24T00:00:00Z');
 
 function buildProductHtml(record, urlMap, { maxFeedback = 3, maxWp = 6 } = {}) {
   const f = record.fields;
   const feedbackImgs = f['פידבקים תמונה '] || [];
   const wpImgs = f['תמונות לוואטסאפ'] || [];
-  const rawDesc = (f['תיאור'] || '').replace(CASHBACK_BLOCK_RE, '').trim();
+  const stripCashback = new Date() < CASHBACK_STRIP_UNTIL;
+  const rawDesc = stripCashback
+    ? (f['תיאור'] || '').replace(CASHBACK_BLOCK_RE, '').trim()
+    : (f['תיאור'] || '');
   const description = rawDesc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   let html = `<div dir="rtl" style="margin-bottom:28px;padding-bottom:28px;border-bottom:2px solid #f0f0f0;font-family:Arial,sans-serif;">`;
