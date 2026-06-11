@@ -95,11 +95,18 @@ function imgTag(url) {
   return `<img src="${url}" style="max-width:560px;width:100%;display:block;margin-bottom:8px;border-radius:8px;" />`;
 }
 
+// Match the retired cashback paragraph + its referral URL on the next line.
+// The block was stamped into every aliexpress draft until 2026-06-09; we strip
+// it at email-build time instead of editing Airtable (would bump 60+ rows of
+// תאריך עדכון אחרון and disrupt the daily queue ordering).
+const CASHBACK_BLOCK_RE = /רוצים לקבל קאשבק[^\n]*\n+https?:\/\/s\.click\.aliexpress\.com\/e\/_c3cNkFs1\n?/g;
+
 function buildProductHtml(record, urlMap, { maxFeedback = 3, maxWp = 6 } = {}) {
   const f = record.fields;
   const feedbackImgs = f['פידבקים תמונה '] || [];
   const wpImgs = f['תמונות לוואטסאפ'] || [];
-  const description = (f['תיאור'] || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const rawDesc = (f['תיאור'] || '').replace(CASHBACK_BLOCK_RE, '').trim();
+  const description = rawDesc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   let html = `<div dir="rtl" style="margin-bottom:28px;padding-bottom:28px;border-bottom:2px solid #f0f0f0;font-family:Arial,sans-serif;">`;
   for (const img of feedbackImgs.slice(0, maxFeedback)) if (img.url) html += imgTag(urlMap.get(img.url) || img.url);
