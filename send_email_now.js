@@ -246,7 +246,7 @@ async function run() {
   const today = new Date().toISOString().split('T')[0];
 
   // One-shot pin: include specific products in a specific send (order = display order)
-  const PIN_ONCE = { date: '2026-06-09', evening: true, ids: ['recsTcPwq2YzXc2Xd', 'rec3NJfwP06o1NpQP'] };
+  const PIN_ONCE = { date: '2026-06-15', evening: false, ids: ['recsTcPwq2YzXc2Xd'] };
   const shouldPin = todayIL === PIN_ONCE.date && (PIN_ONCE.evening ? isEveningRun() : !isEveningRun());
 
   // 1. Fetch Airtable records
