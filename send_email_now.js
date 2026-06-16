@@ -325,7 +325,11 @@ async function run() {
     toListsById: [833622],
     subject: currentSubject(),
     body: emailBody,
-    customFromAddress: 'shalal.buy4you.co.il@send.vpcontact.com'
+    customFromAddress: 'shalal.buy4you.co.il@send.vpcontact.com',
+    // Without this, smoove defaults Reply-To to customFromAddress (the send-only
+    // vpcontact address, which silently drops every reply). Route replies to the
+    // real inbox: shalal@buy4you.co.il -> Cloudflare -> shalal.buy4you@gmail.com.
+    customReplyToAddress: 'shalal@buy4you.co.il'
   };
   if (pdfUrl) {
     campaignData.campaignAttachments = [pdfUrl];
