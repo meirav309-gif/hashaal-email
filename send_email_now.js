@@ -259,7 +259,7 @@ async function run() {
   // 1. Fetch Airtable records
   console.log('שולף מוצרים מ-Airtable...');
   const pinCount = shouldPin ? PIN_ONCE.ids.length : 0;
-  const regularMax = 18 - pinCount;
+  const regularMax = 15 - pinCount;
   const qs = new URLSearchParams({
     filterByFormula: filterFormula,
     'sort[0][field]': 'תאריך עדכון אחרון ',
