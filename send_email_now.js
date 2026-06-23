@@ -6,7 +6,14 @@ const path = require('path');
 const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
 const SMOOVE_TOKEN = process.env.SMOOVE_TOKEN;
 
-const filterFormula = `AND(NOT({קוד מוצר}="סטוריז"),NOT(SEARCH("פספוסי קניות",{קוד מוצר})),NOT(SEARCH("שבוע טוב",{קוד מוצר})),IS_AFTER({תאריך עדכון אחרון },"2026-04-20"),OR(NOT({תאריך שליחה במייל}),IS_BEFORE({תאריך שליחה במייל},{תאריך עדכון אחרון })))`;
+// Cutoff is 2026-06-04 10:00 UTC (13:00 Israel), NOT an arbitrary date. On 2026-06-04
+// the Airtable image compression touched the "פידבקים תמונה" field on 289 old records,
+// which bumped their computed תאריך עדכון אחרון to ~09:27-09:28 UTC and shoved ~25
+// never-sent 2023-2024 products to the front of the daily queue. This cutoff sits after
+// that bump window and before the first genuine post-compression edit (12:44 UTC), so the
+// queue starts from real new products. Editing any old product re-bumps it past the
+// cutoff and brings it back into rotation automatically.
+const filterFormula = `AND(NOT({קוד מוצר}="סטוריז"),NOT(SEARCH("פספוסי קניות",{קוד מוצר})),NOT(SEARCH("שבוע טוב",{קוד מוצר})),IS_AFTER({תאריך עדכון אחרון },"2026-06-04T10:00:00.000Z"),OR(NOT({תאריך שליחה במייל}),IS_BEFORE({תאריך שליחה במייל},{תאריך עדכון אחרון })))`;
 
 function httpsRequest(options, body) {
   return new Promise((resolve, reject) => {
