@@ -363,21 +363,30 @@ async function run() {
   }
   console.log('Campaign ID:', campaignId);
 
-  // 6. Send campaign
+  // 6. Send campaign (retry up to 3 times on failure)
   console.log('שולח קמפיין...');
   const sendPayload = '{}';
-  const sendRes = await httpsRequest({
-    hostname: 'rest.smoove.io',
-    path: `/v1/Campaigns/${campaignId}/send`,
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${SMOOVE_TOKEN}`,
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(sendPayload)
-    }
-  }, sendPayload);
+  let sendRes;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    sendRes = await httpsRequest({
+      hostname: 'rest.smoove.io',
+      path: `/v1/Campaigns/${campaignId}/send`,
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${SMOOVE_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(sendPayload)
+      }
+    }, sendPayload);
+    console.log(`שליחה ניסיון ${attempt}: status ${sendRes.status}, ${JSON.stringify(sendRes.body).substring(0, 100)}`);
+    if (sendRes.status >= 200 && sendRes.status < 300) break;
+    if (attempt < 3) await new Promise(r => setTimeout(r, 5000));
+  }
 
-  console.log('שליחה status:', sendRes.status, JSON.stringify(sendRes.body).substring(0, 200));
+  if (sendRes.status < 200 || sendRes.status >= 300) {
+    console.error('❌ שליחת קמפיין נכשלה אחרי 3 ניסיונות. לא מעדכן Airtable.');
+    return;
+  }
 
   // 7. Update Airtable — set send date
   console.log('מעדכן תאריך שליחה ב-Airtable...');
