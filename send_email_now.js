@@ -143,6 +143,8 @@ const CASHBACK_END = '2026-06-10'; // promo ends June 10 at midnight (last send:
 const CASHBACK_SUBJECT_MORNING = '🔥 התחיל מבצע קאשבק! 10 ימים של מוצרים חמים + כסף חזרה';
 const CASHBACK_SUBJECT_EVENING = '🌙 עוד מוצרים שווים לערב + קאשבק על כל קנייה';
 const REGULAR_SUBJECT = '🔥 השלל החם ברשת - מוצרים של היום';
+// One-shot subject suffix: appended to the subject only on this Israel date
+const SUBJECT_ONCE = { date: '2026-07-08', suffix: ' + קופונים משתלמים' };
 
 function israelHour() {
   return new Date(Date.now() + 3 * 60 * 60 * 1000).getUTCHours();
@@ -159,8 +161,11 @@ function isCashbackPromoActive() {
 }
 
 function currentSubject() {
-  if (!isCashbackPromoActive()) return REGULAR_SUBJECT;
-  return isEveningRun() ? CASHBACK_SUBJECT_EVENING : CASHBACK_SUBJECT_MORNING;
+  const base = isCashbackPromoActive()
+    ? (isEveningRun() ? CASHBACK_SUBJECT_EVENING : CASHBACK_SUBJECT_MORNING)
+    : REGULAR_SUBJECT;
+  const todayIL = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().split('T')[0];
+  return todayIL === SUBJECT_ONCE.date ? base + SUBJECT_ONCE.suffix : base;
 }
 
 function cashbackBanner() {
@@ -253,7 +258,7 @@ async function run() {
   const today = new Date().toISOString().split('T')[0];
 
   // One-shot pin: include specific products in a specific send (order = display order)
-  const PIN_ONCE = { date: '2026-07-06', evening: false, ids: ['rec3idLDd8qSQIQKX'] };
+  const PIN_ONCE = { date: '2026-07-08', evening: false, ids: ['recsTcPwq2YzXc2Xd'] };
   const shouldPin = todayIL === PIN_ONCE.date && (PIN_ONCE.evening ? isEveningRun() : !isEveningRun());
 
   // 1. Fetch Airtable records
