@@ -143,8 +143,8 @@ const CASHBACK_END = '2026-06-10'; // promo ends June 10 at midnight (last send:
 const CASHBACK_SUBJECT_MORNING = '🔥 התחיל מבצע קאשבק! 10 ימים של מוצרים חמים + כסף חזרה';
 const CASHBACK_SUBJECT_EVENING = '🌙 עוד מוצרים שווים לערב + קאשבק על כל קנייה';
 const REGULAR_SUBJECT = '🔥 השלל החם ברשת - מוצרים של היום';
-// One-shot subject suffix: appended to the subject only on this Israel date
-const SUBJECT_ONCE = { date: '2026-07-13', suffix: ' + סייל חדש וקופונים שווים' };
+// Subject suffix window: appended to the subject on Israel dates from..until (inclusive)
+const SUBJECT_WINDOW = { from: '2026-07-13', until: '2026-07-19', suffix: ' + סייל חדש וקופונים שווים' };
 
 function israelHour() {
   return new Date(Date.now() + 3 * 60 * 60 * 1000).getUTCHours();
@@ -165,7 +165,7 @@ function currentSubject() {
     ? (isEveningRun() ? CASHBACK_SUBJECT_EVENING : CASHBACK_SUBJECT_MORNING)
     : REGULAR_SUBJECT;
   const todayIL = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().split('T')[0];
-  return todayIL === SUBJECT_ONCE.date ? base + SUBJECT_ONCE.suffix : base;
+  return todayIL >= SUBJECT_WINDOW.from && todayIL <= SUBJECT_WINDOW.until ? base + SUBJECT_WINDOW.suffix : base;
 }
 
 function cashbackBanner() {
@@ -257,13 +257,13 @@ async function run() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  // One-shot pin: include specific products in a specific send (order = display order)
-  const PIN_ONCE = { date: '2026-07-13', evening: false, ids: ['recsTcPwq2YzXc2Xd'] };
-  const shouldPin = todayIL === PIN_ONCE.date && (PIN_ONCE.evening ? isEveningRun() : !isEveningRun());
+  // Pin window: include specific products first in every send from..until (inclusive, order = display order)
+  const PIN_WINDOW = { from: '2026-07-13', until: '2026-07-19', evening: false, ids: ['recsTcPwq2YzXc2Xd'] };
+  const shouldPin = todayIL >= PIN_WINDOW.from && todayIL <= PIN_WINDOW.until && (PIN_WINDOW.evening ? isEveningRun() : !isEveningRun());
 
   // 1. Fetch Airtable records
   console.log('שולף מוצרים מ-Airtable...');
-  const pinCount = shouldPin ? PIN_ONCE.ids.length : 0;
+  const pinCount = shouldPin ? PIN_WINDOW.ids.length : 0;
   const regularMax = 18 - pinCount;
   const qs = new URLSearchParams({
     filterByFormula: filterFormula,
@@ -288,7 +288,7 @@ async function run() {
 
   if (shouldPin) {
     const pinnedRecs = [];
-    for (const id of PIN_ONCE.ids) {
+    for (const id of PIN_WINDOW.ids) {
       const pinRes = await httpsRequest({
         hostname: 'api.airtable.com',
         path: `/v0/app0Y6aG3mPGuZZTI/tblGHPMhXKU7wQz6j/${id}`,
@@ -300,7 +300,7 @@ async function run() {
         console.log(`Pinned: ${pinRes.body.fields['קוד מוצר']}`);
       }
     }
-    records = [...pinnedRecs, ...records.filter(r => !PIN_ONCE.ids.includes(r.id))];
+    records = [...pinnedRecs, ...records.filter(r => !PIN_WINDOW.ids.includes(r.id))];
   }
 
   console.log(`נמצאו ${records.length} מוצרים`);
