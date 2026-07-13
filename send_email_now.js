@@ -144,7 +144,7 @@ const CASHBACK_SUBJECT_MORNING = '🔥 התחיל מבצע קאשבק! 10 ימי
 const CASHBACK_SUBJECT_EVENING = '🌙 עוד מוצרים שווים לערב + קאשבק על כל קנייה';
 const REGULAR_SUBJECT = '🔥 השלל החם ברשת - מוצרים של היום';
 // One-shot subject suffix: appended to the subject only on this Israel date
-const SUBJECT_ONCE = { date: '2026-07-08', suffix: ' + קופונים משתלמים' };
+const SUBJECT_ONCE = { date: '2026-07-13', suffix: ' + סייל חדש וקופונים שווים' };
 
 function israelHour() {
   return new Date(Date.now() + 3 * 60 * 60 * 1000).getUTCHours();
