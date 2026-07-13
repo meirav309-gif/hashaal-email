@@ -230,7 +230,10 @@ function isYomTovToday() {
       res.on('end', () => {
         try {
           const items = (JSON.parse(data).items) || [];
-          const yt = items.find(it => it.yomtov === true);
+          // Skip real Yom Tov days, plus Tish'a B'Av — a fast (yomtov=false in Hebcal)
+          // that Meirav wants email-free. Regex skips "Erev Tish'a B'Av" and tolerates
+          // Hebcal's curly apostrophes and "(observed)" variants.
+          const yt = items.find(it => it.yomtov === true || /^Tish.a B.Av/.test(it.title));
           resolve(yt ? yt.title : null);
         } catch (e) { resolve(null); }
       });
