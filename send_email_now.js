@@ -143,8 +143,9 @@ const CASHBACK_END = '2026-06-10'; // promo ends June 10 at midnight (last send:
 const CASHBACK_SUBJECT_MORNING = '🔥 התחיל מבצע קאשבק! 10 ימים של מוצרים חמים + כסף חזרה';
 const CASHBACK_SUBJECT_EVENING = '🌙 עוד מוצרים שווים לערב + קאשבק על כל קנייה';
 const REGULAR_SUBJECT = '🔥 השלל החם ברשת - מוצרים של היום';
-// Subject suffix window: appended to the subject on Israel dates from..until (inclusive)
-const SUBJECT_WINDOW = { from: '2026-07-13', until: '2026-07-19', suffix: ' + סייל חדש וקופונים שווים' };
+// Subject window: on Israel dates from..until (inclusive), either replace the subject
+// entirely (subject) or append a suffix (suffix). subject wins if both are set.
+const SUBJECT_WINDOW = { from: '2026-07-27', until: '2026-08-26', subject: 'סייל חזרה לבית הספר עם הנחות וקופונים משתלמים' };
 
 function israelHour() {
   return new Date(Date.now() + 3 * 60 * 60 * 1000).getUTCHours();
@@ -165,7 +166,11 @@ function currentSubject() {
     ? (isEveningRun() ? CASHBACK_SUBJECT_EVENING : CASHBACK_SUBJECT_MORNING)
     : REGULAR_SUBJECT;
   const todayIL = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().split('T')[0];
-  return todayIL >= SUBJECT_WINDOW.from && todayIL <= SUBJECT_WINDOW.until ? base + SUBJECT_WINDOW.suffix : base;
+  const inWindow = todayIL >= SUBJECT_WINDOW.from && todayIL <= SUBJECT_WINDOW.until;
+  if (!inWindow) return base;
+  if (SUBJECT_WINDOW.subject) return SUBJECT_WINDOW.subject;
+  if (SUBJECT_WINDOW.suffix) return base + SUBJECT_WINDOW.suffix;
+  return base;
 }
 
 function cashbackBanner() {
@@ -261,7 +266,7 @@ async function run() {
   const today = new Date().toISOString().split('T')[0];
 
   // Pin window: include specific products first in every send from..until (inclusive, order = display order)
-  const PIN_WINDOW = { from: '2026-07-13', until: '2026-07-19', evening: false, ids: ['recsTcPwq2YzXc2Xd'] };
+  const PIN_WINDOW = { from: '2026-07-27', until: '2026-08-26', evening: false, ids: ['recsTcPwq2YzXc2Xd'] };
   const shouldPin = todayIL >= PIN_WINDOW.from && todayIL <= PIN_WINDOW.until && (PIN_WINDOW.evening ? isEveningRun() : !isEveningRun());
 
   // 1. Fetch Airtable records
