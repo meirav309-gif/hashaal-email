@@ -13,7 +13,9 @@ const SMOOVE_TOKEN = process.env.SMOOVE_TOKEN;
 // that bump window and before the first genuine post-compression edit (12:44 UTC), so the
 // queue starts from real new products. Editing any old product re-bumps it past the
 // cutoff and brings it back into rotation automatically.
-const filterFormula = `AND(NOT({קוד מוצר}="סטוריז"),NOT(SEARCH("פספוסי קניות",{קוד מוצר})),NOT(SEARCH("שבוע טוב",{קוד מוצר})),IS_AFTER({תאריך עדכון אחרון },"2026-06-04T10:00:00.000Z"),OR(NOT({תאריך שליחה במייל}),IS_BEFORE({תאריך שליחה במייל},{תאריך עדכון אחרון })))`;
+// מוצר במצב טיוטה הוא מוצר שמירב עוד לא אישרה. הוא לא יוצא לרשימת
+// התפוצה עד שהיא לוחצת אישור, בדיוק כמו בסטטוס ובקבוצות.
+const filterFormula = `AND(NOT({Status}="טיוטה"),NOT({קוד מוצר}="סטוריז"),NOT(SEARCH("פספוסי קניות",{קוד מוצר})),NOT(SEARCH("שבוע טוב",{קוד מוצר})),IS_AFTER({תאריך עדכון אחרון },"2026-06-04T10:00:00.000Z"),OR(NOT({תאריך שליחה במייל}),IS_BEFORE({תאריך שליחה במייל},{תאריך עדכון אחרון })))`;
 
 function httpsRequest(options, body) {
   return new Promise((resolve, reject) => {
