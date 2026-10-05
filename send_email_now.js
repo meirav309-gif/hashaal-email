@@ -5,6 +5,8 @@ const path = require('path');
 
 const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
 const SMOOVE_TOKEN = process.env.SMOOVE_TOKEN;
+// מייל לדוגמה: נשלח רק לכתובת הזו, לא לרשימה, ולא מסמן שום מוצר כנשלח.
+const TEST_EMAIL = (process.env.TEST_EMAIL || '').trim();
 
 // Cutoff is 2026-06-04 10:00 UTC (13:00 Israel), NOT an arbitrary date. On 2026-06-04
 // the Airtable image compression touched the "פידבקים תמונה" field on 289 old records,
@@ -255,13 +257,13 @@ async function run() {
   const israelNow = new Date(Date.now() + 3 * 60 * 60 * 1000);
   const todayIL = israelNow.toISOString().split('T')[0];
   const hourIL = israelNow.getUTCHours();
-  if (todayIL > CASHBACK_END && hourIL >= 18) {
+  if (!TEST_EMAIL && todayIL > CASHBACK_END && hourIL >= 18) {
     console.log(`המבצע הסתיים והשעה ${hourIL}:xx — מדלגים על שליחת ערב. יציאה.`);
     return;
   }
 
   // Check for Yom Tov (Israeli observance) and skip if today
-  const yomTov = await isYomTovToday();
+  const yomTov = TEST_EMAIL ? null : await isYomTovToday();
   if (yomTov) {
     console.log(`היום ${yomTov} — לא שולחים. יציאה.`);
     return;
@@ -355,6 +357,13 @@ async function run() {
     // real inbox: shalal@buy4you.co.il -> Cloudflare -> shalal.buy4you@gmail.com.
     customReplyToAddress: 'shalal@buy4you.co.il'
   };
+  if (TEST_EMAIL) {
+    delete campaignData.toListsById;
+    campaignData.toMembersByEmail = [TEST_EMAIL];
+    campaignData.name = `בדיקה - ${campaignData.name}`;
+    campaignData.subject = `[בדיקה] ${campaignData.subject}`;
+    console.log(`מצב בדיקה: נשלח רק אל ${TEST_EMAIL}`);
+  }
   if (pdfUrl) {
     campaignData.campaignAttachments = [pdfUrl];
   }
@@ -402,6 +411,12 @@ async function run() {
 
   if (sendRes.status < 200 || sendRes.status >= 300) {
     console.error('❌ שליחת קמפיין נכשלה אחרי 3 ניסיונות. לא מעדכן Airtable.');
+    return;
+  }
+
+  if (TEST_EMAIL) {
+    console.log(`
+✅ מייל בדיקה נשלח אל ${TEST_EMAIL}. Airtable לא עודכן.`);
     return;
   }
 

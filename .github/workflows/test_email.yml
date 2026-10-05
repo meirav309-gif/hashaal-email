@@ -1,0 +1,39 @@
+name: Send Hashaal Test Email
+
+on:
+  workflow_dispatch:      # ידני בלבד. שולח את המייל היומי לכתובת אחת, לא לרשימה
+    inputs:
+      email:
+        description: 'כתובת לקבלת מייל הבדיקה'
+        required: true
+        default: 'meirav309@gmail.com'
+
+jobs:
+  send-test-email:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install requests Pillow playwright
+
+      - name: Install Playwright browser
+        run: playwright install chromium --with-deps
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Send email
+        run: node send_email_now.js
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+          SMOOVE_TOKEN: ${{ secrets.SMOOVE_TOKEN }}
+          TEST_EMAIL: ${{ inputs.email }}
