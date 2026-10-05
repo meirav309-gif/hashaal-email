@@ -139,6 +139,7 @@ function buildProductHtml(record, urlMap, { maxFeedback = 3, maxWp = 6 } = {}) {
 
 const LOGO_URL   = 'https://content.vp4.me/shalal/Content/IMG_20230226_200201_169_590x590-r.jpg';
 const SIGNUP_URL = 'https://lp.vp4.me/oyz4';
+const SITE_URL   = 'https://buy4you.co.il/?utm_source=smoove&utm_medium=email&utm_campaign=daily';
 const BTN_COLOR  = '#D4746E';
 const CASHBACK_URL = 'https://s.click.aliexpress.com/e/_c3cNkFs1';
 const CASHBACK_END = '2026-06-10'; // promo ends June 10 at midnight (last send: June 10)
@@ -189,8 +190,9 @@ function buildEmailHtml(productsHtml) {
   return `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"/></head>` +
     `<body style="font-family:Arial,sans-serif;direction:rtl;text-align:right;max-width:600px;margin:0 auto;padding:20px;background:#fff;">` +
     `<div style="text-align:center;margin-bottom:24px;">` +
-    `<img src="${LOGO_URL}" style="max-width:280px;width:100%;border-radius:12px;display:block;margin:0 auto 14px;" />` +
-    `<p style="font-size:18px;font-weight:bold;color:#222;margin:0;">✨ הפריטים הכי שווים ברשת ✨</p>` +
+    `<a href="${SITE_URL}"><img src="${LOGO_URL}" style="max-width:280px;width:100%;border-radius:12px;display:block;margin:0 auto 14px;border:0;" /></a>` +
+    `<p style="font-size:18px;font-weight:bold;color:#222;margin:0 0 14px;">✨ הפריטים הכי שווים ברשת ✨</p>` +
+    `<a href="${SITE_URL}" style="display:inline-block;background:${BTN_COLOR};color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:bold;">לכל המוצרים באתר השלל החם ברשת »</a>` +
     `</div>` +
     banner +
     productsHtml +
