@@ -7,6 +7,10 @@ on:
         description: 'כתובת לקבלת מייל הבדיקה'
         required: true
         default: 'meirav309@gmail.com'
+      resend_date:
+        description: 'אופציונלי: תאריך (YYYY-MM-DD) לשליחה חוזרת של אותם מוצרים'
+        required: false
+        default: ''
 
 jobs:
   send-test-email:
@@ -39,3 +43,4 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           TEST_EMAIL: ${{ inputs.email }}
+          RESEND_DATE: ${{ inputs.resend_date }}

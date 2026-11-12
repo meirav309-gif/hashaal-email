@@ -7,6 +7,8 @@ const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
 const SMOOVE_TOKEN = process.env.SMOOVE_TOKEN;
 // מייל לדוגמה: נשלח רק לכתובת הזו, לא לרשימה, ולא מסמן שום מוצר כנשלח.
 const TEST_EMAIL = (process.env.TEST_EMAIL || '').trim();
+// שליחה חוזרת: אותם מוצרים שיצאו בתאריך הזה (YYYY-MM-DD), בלי לעדכן את Airtable.
+const RESEND_DATE = (process.env.RESEND_DATE || '').trim();
 
 // Cutoff is 2026-06-04 10:00 UTC (13:00 Israel), NOT an arbitrary date. On 2026-06-04
 // the Airtable image compression touched the "פידבקים תמונה" field on 289 old records,
@@ -322,7 +324,7 @@ async function run() {
   const pinCount = shouldPin ? PIN_WINDOW.ids.length : 0;
   const regularMax = 18 - pinCount;
   const qs = new URLSearchParams({
-    filterByFormula: filterFormula,
+    filterByFormula: RESEND_DATE ? `IS_SAME({תאריך שליחה במייל},"${RESEND_DATE}","day")` : filterFormula,
     'sort[0][field]': 'תאריך עדכון אחרון ',
     'sort[0][direction]': 'asc',
     maxRecords: String(regularMax)
@@ -459,6 +461,12 @@ async function run() {
   if (TEST_EMAIL) {
     console.log(`
 ✅ מייל בדיקה נשלח אל ${TEST_EMAIL}. Airtable לא עודכן.`);
+    return;
+  }
+
+  if (RESEND_DATE) {
+    console.log(`
+✅ שליחה חוזרת של המייל מ-${RESEND_DATE} הושלמה. Airtable לא עודכן.`);
     return;
   }
 
