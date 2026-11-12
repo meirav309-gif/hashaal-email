@@ -208,6 +208,7 @@ function isCashbackPromoActive() {
 }
 
 function currentSubject() {
+  if ((process.env.SUBJECT_OVERRIDE || '').trim()) return process.env.SUBJECT_OVERRIDE.trim();
   const base = isCashbackPromoActive()
     ? (isEveningRun() ? CASHBACK_SUBJECT_EVENING : CASHBACK_SUBJECT_MORNING)
     : REGULAR_SUBJECT;

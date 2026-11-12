@@ -6,6 +6,10 @@ on:
       resend_date:
         description: 'תאריך (YYYY-MM-DD) של המייל לשליחה חוזרת'
         required: true
+      subject:
+        description: 'אופציונלי: נושא אחר למייל'
+        required: false
+        default: ''
 
 jobs:
   resend-email:
@@ -38,3 +42,4 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           RESEND_DATE: ${{ inputs.resend_date }}
+          SUBJECT_OVERRIDE: ${{ inputs.subject }}
