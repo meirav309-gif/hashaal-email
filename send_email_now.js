@@ -272,7 +272,7 @@ async function run() {
   const today = new Date().toISOString().split('T')[0];
 
   // Pin window: include specific products first in every send from..until (inclusive, order = display order)
-  const PIN_WINDOW = { from: '2026-07-27', until: '2026-08-26', evening: false, ids: ['recsTcPwq2YzXc2Xd'] };
+  const PIN_WINDOW = { from: '2026-11-12', until: '2026-11-12', evening: false, ids: ['recE2DxkMn6WFNm3Q'] };
   const shouldPin = todayIL >= PIN_WINDOW.from && todayIL <= PIN_WINDOW.until && (PIN_WINDOW.evening ? isEveningRun() : !isEveningRun());
 
   // 1. Fetch Airtable records
