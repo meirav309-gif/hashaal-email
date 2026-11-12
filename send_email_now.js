@@ -52,7 +52,7 @@ function downloadBuffer(url) {
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
 const MEDIA_BUCKET = 'email-media';
-const MEDIA_KEEP_DAYS = 45;
+const MEDIA_KEEP_DAYS = 14;
 
 function imageMime(buf) {
   if (buf[0] === 0x89 && buf[1] === 0x50) return ['image/png', 'png'];
