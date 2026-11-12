@@ -1,5 +1,6 @@
 """
-Render HTML email to PDF (with resized embedded images) and upload to smoove.
+Render HTML email to PDF (with resized embedded images) and upload it to the
+buy4you Supabase bucket "email-media" (smoove's upload endpoint refuses it since 11.11.2026).
 Prints the URL to stdout.
 Usage: python html_to_pdf_upload.py <html_file>
 """
@@ -12,7 +13,9 @@ import requests
 from PIL import Image
 from playwright.sync_api import sync_playwright
 
-UPLOAD_URL = 'https://studio-api.admin.smoove.io/upload'
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '').rstrip('/')
+SUPABASE_SECRET_KEY = os.environ.get('SUPABASE_SECRET_KEY', '')
+MEDIA_BUCKET = 'email-media'
 MAX_PDF_BYTES = 1_650_000  # smoove rejects above ~1.68MB
 
 # Try these quality levels in order until PDF fits
@@ -103,15 +106,19 @@ def html_to_pdf(html_path):
 
 
 def upload_pdf(pdf_bytes, filename='hashaal.pdf'):
+    from datetime import datetime, timedelta, timezone
+    day = (datetime.now(timezone.utc) + timedelta(hours=3)).strftime('%Y-%m-%d')
+    object_path = f'{day}/{filename}'
     resp = requests.post(
-        UPLOAD_URL,
-        files={'file': (filename, pdf_bytes, 'application/pdf')},
-        timeout=30
+        f'{SUPABASE_URL}/storage/v1/object/{MEDIA_BUCKET}/{object_path}',
+        headers={'Authorization': f'Bearer {SUPABASE_SECRET_KEY}', 'apikey': SUPABASE_SECRET_KEY,
+                 'Content-Type': 'application/pdf', 'x-upsert': 'true'},
+        data=pdf_bytes,
+        timeout=60
     )
     if not resp.ok:
         raise Exception(f'Upload failed {resp.status_code}: {resp.text[:300]}')
-    return resp.json()['fileUrl']
-
+    return f'{SUPABASE_URL}/storage/v1/object/public/{MEDIA_BUCKET}/{object_path}'
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

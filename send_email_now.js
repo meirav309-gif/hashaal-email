@@ -45,38 +45,77 @@ function downloadBuffer(url) {
   });
 }
 
+// Images and the PDF live in the buy4you Supabase bucket "email-media" (public).
+// Until 11.11.2026 they went to studio-api.admin.smoove.io/upload, which now refuses
+// images and wants an account name for PDFs. Airtable URLs expire after ~2-3 hours,
+// so an email must never point at them.
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
+const MEDIA_BUCKET = 'email-media';
+const MEDIA_KEEP_DAYS = 45;
+
+function imageMime(buf) {
+  if (buf[0] === 0x89 && buf[1] === 0x50) return ['image/png', 'png'];
+  if (buf.slice(0, 4).toString() === 'RIFF' && buf.slice(8, 12).toString() === 'WEBP') return ['image/webp', 'webp'];
+  if (buf.slice(0, 3).toString() === 'GIF') return ['image/gif', 'gif'];
+  return ['image/jpeg', 'jpg'];
+}
+
+function supabaseRequest(method, apiPath, body, contentType) {
+  const u = new URL(SUPABASE_URL + apiPath);
+  const headers = { Authorization: `Bearer ${SUPABASE_SECRET_KEY}`, apikey: SUPABASE_SECRET_KEY };
+  if (body) { headers['Content-Type'] = contentType; headers['Content-Length'] = body.length; headers['x-upsert'] = 'true'; }
+  return new Promise((resolve, reject) => {
+    const req = https.request({ hostname: u.hostname, path: u.pathname + u.search, method, headers }, (r) => {
+      let d = ''; r.on('data', c => d += c); r.on('end', () => resolve({ status: r.statusCode, text: d }));
+    });
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
+async function uploadMedia(buf, contentType, name) {
+  const day = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const objectPath = `${day}/${name}`;
+  const res = await supabaseRequest('POST', `/storage/v1/object/${MEDIA_BUCKET}/${objectPath}`, buf, contentType);
+  if (res.status !== 200) throw new Error(`Supabase upload ${res.status}: ${res.text.slice(0, 200)}`);
+  return `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${objectPath}`;
+}
+
+// Deletes date folders older than MEDIA_KEEP_DAYS so the bucket does not grow forever.
+async function cleanupOldMedia() {
+  try {
+    const cutoff = new Date(Date.now() - MEDIA_KEEP_DAYS * 86400000).toISOString().split('T')[0];
+    const list = await supabaseRequest('POST', `/storage/v1/object/list/${MEDIA_BUCKET}`,
+      Buffer.from(JSON.stringify({ prefix: '', limit: 1000 })), 'application/json');
+    const folders = JSON.parse(list.text).map(o => o.name).filter(n => /^\d{4}-\d{2}-\d{2}$/.test(n) && n < cutoff);
+    for (const folder of folders) {
+      const files = await supabaseRequest('POST', `/storage/v1/object/list/${MEDIA_BUCKET}`,
+        Buffer.from(JSON.stringify({ prefix: folder + '/', limit: 1000 })), 'application/json');
+      const prefixes = JSON.parse(files.text).map(f => `${folder}/${f.name}`);
+      if (prefixes.length) {
+        await supabaseRequest('DELETE', `/storage/v1/object/${MEDIA_BUCKET}`,
+          Buffer.from(JSON.stringify({ prefixes })), 'application/json');
+      }
+      console.log(`נמחקה תיקיית מדיה ישנה: ${folder} (${prefixes.length} קבצים)`);
+    }
+  } catch (e) {
+    console.error('ניקוי מדיה ישנה נכשל:', e.message);
+  }
+}
+
 const smooveUrlCache = new Map();
+let imageCounter = 0;
 
 async function uploadImageToSmoove(airtableUrl) {
   if (smooveUrlCache.has(airtableUrl)) return smooveUrlCache.get(airtableUrl);
   try {
     const imageData = await downloadBuffer(airtableUrl);
-    const boundary = '----Boundary' + Date.now();
-    const ext = airtableUrl.split('?')[0].split('.').pop().toLowerCase() || 'jpg';
-    const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
-    const filename = `img_${Date.now()}.${ext}`;
-    const header = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mime}\r\n\r\n`);
-    const footer = Buffer.from(`\r\n--${boundary}--\r\n`);
-    const body = Buffer.concat([header, imageData, footer]);
-
-    const res = await new Promise((resolve, reject) => {
-      const req = https.request({
-        hostname: 'studio-api.admin.smoove.io',
-        path: '/upload',
-        method: 'POST',
-        headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length }
-      }, (r) => {
-        let d = ''; r.on('data', c => d += c); r.on('end', () => resolve(d));
-      });
-      req.on('error', reject);
-      req.write(body);
-      req.end();
-    });
-
-    const json = JSON.parse(res);
-    const smooveUrl = json.fileUrl;
-    smooveUrlCache.set(airtableUrl, smooveUrl);
-    return smooveUrl;
+    const [mime, ext] = imageMime(imageData);
+    const url = await uploadMedia(imageData, mime, `img_${Date.now()}_${imageCounter++}.${ext}`);
+    smooveUrlCache.set(airtableUrl, url);
+    return url;
   } catch (e) {
     console.error('  העלאת תמונה נכשלה:', e.message);
     return airtableUrl; // fallback to original
@@ -270,6 +309,9 @@ async function run() {
   }
 
   const today = new Date().toISOString().split('T')[0];
+
+  if (!SUPABASE_URL || !SUPABASE_SECRET_KEY) console.error('חסרים SUPABASE_URL או SUPABASE_SECRET_KEY: התמונות יישארו קישורי Airtable זמניים');
+  else await cleanupOldMedia();
 
   // Pin window: include specific products first in every send from..until (inclusive, order = display order)
   const PIN_WINDOW = { from: '2026-11-12', until: '2026-11-12', evening: false, ids: ['recE2DxkMn6WFNm3Q'] };
