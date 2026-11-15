@@ -2,6 +2,7 @@ const https = require('https');
 const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
 const SMOOVE_TOKEN = process.env.SMOOVE_TOKEN;
@@ -51,10 +52,37 @@ function downloadBuffer(url) {
 // Until 11.11.2026 they went to studio-api.admin.smoove.io/upload, which now refuses
 // images and wants an account name for PDFs. Airtable URLs expire after ~2-3 hours,
 // so an email must never point at them.
+// The email links to buy4you.co.il/email-media/<date>/<file>, not to Supabase: the
+// site fetches each file from Supabase once and Cloudflare caches it. Linking to
+// Supabase directly (12-15.11.2026) cost ~4 MB of Supabase egress per open and blew
+// the free plan's 5 GB quota in 4 days.
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
 const MEDIA_BUCKET = 'email-media';
+const MEDIA_PUBLIC_BASE = (process.env.MEDIA_PUBLIC_BASE || 'https://buy4you.co.il/email-media').replace(/\/$/, '');
 const MEDIA_KEEP_DAYS = 14;
+
+// Shrinks an image to 600px JPEG (shrink_image.py, Pillow). GIFs stay as they are
+// (may be animated). On any failure the original is kept.
+async function shrinkImage(buf) {
+  if (buf.slice(0, 3).toString() === 'GIF') return buf;
+  const stamp = `${process.pid}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const src = path.join(os.tmpdir(), `shrink_in_${stamp}`);
+  const dst = path.join(os.tmpdir(), `shrink_out_${stamp}.jpg`);
+  try {
+    fs.writeFileSync(src, buf);
+    await new Promise((resolve, reject) =>
+      execFile('python', [path.join(__dirname, 'shrink_image.py'), src, dst], (err, _out, stderr) =>
+        err ? reject(new Error(stderr || err.message)) : resolve()));
+    const out = fs.readFileSync(dst);
+    return out.length && out.length < buf.length ? out : buf;
+  } catch (e) {
+    console.error('  הקטנת תמונה נכשלה, נשארת המקורית:', e.message.slice(0, 200));
+    return buf;
+  } finally {
+    for (const f of [src, dst]) { try { fs.unlinkSync(f); } catch {} }
+  }
+}
 
 function imageMime(buf) {
   if (buf[0] === 0x89 && buf[1] === 0x50) return ['image/png', 'png'];
@@ -82,7 +110,7 @@ async function uploadMedia(buf, contentType, name) {
   const objectPath = `${day}/${name}`;
   const res = await supabaseRequest('POST', `/storage/v1/object/${MEDIA_BUCKET}/${objectPath}`, buf, contentType);
   if (res.status !== 200) throw new Error(`Supabase upload ${res.status}: ${res.text.slice(0, 200)}`);
-  return `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${objectPath}`;
+  return `${MEDIA_PUBLIC_BASE}/${objectPath}`;
 }
 
 // Deletes date folders older than MEDIA_KEEP_DAYS so the bucket does not grow forever.
@@ -113,7 +141,7 @@ let imageCounter = 0;
 async function uploadImageToSmoove(airtableUrl) {
   if (smooveUrlCache.has(airtableUrl)) return smooveUrlCache.get(airtableUrl);
   try {
-    const imageData = await downloadBuffer(airtableUrl);
+    const imageData = await shrinkImage(await downloadBuffer(airtableUrl));
     const [mime, ext] = imageMime(imageData);
     const url = await uploadMedia(imageData, mime, `img_${Date.now()}_${imageCounter++}.${ext}`);
     smooveUrlCache.set(airtableUrl, url);

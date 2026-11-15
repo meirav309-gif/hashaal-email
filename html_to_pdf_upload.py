@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '').rstrip('/')
 SUPABASE_SECRET_KEY = os.environ.get('SUPABASE_SECRET_KEY', '')
 MEDIA_BUCKET = 'email-media'
+MEDIA_PUBLIC_BASE = os.environ.get('MEDIA_PUBLIC_BASE', 'https://buy4you.co.il/email-media').rstrip('/')
 MAX_PDF_BYTES = 1_650_000  # smoove rejects above ~1.68MB
 
 # Try these quality levels in order until PDF fits
@@ -118,7 +119,8 @@ def upload_pdf(pdf_bytes, filename='hashaal.pdf'):
     )
     if not resp.ok:
         raise Exception(f'Upload failed {resp.status_code}: {resp.text[:300]}')
-    return f'{SUPABASE_URL}/storage/v1/object/public/{MEDIA_BUCKET}/{object_path}'
+    # Served through buy4you.co.il (cached there and by Cloudflare), not straight from Supabase.
+    return f'{MEDIA_PUBLIC_BASE}/{object_path}'
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
