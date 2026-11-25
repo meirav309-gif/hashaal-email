@@ -345,7 +345,7 @@ async function run() {
   else await cleanupOldMedia();
 
   // Pin window: include specific products first in every send from..until (inclusive, order = display order)
-  const PIN_WINDOW = { from: '2026-11-25', until: '2026-11-25', evening: true, ids: ['rec3p2A2JNn2ppULf', 'rec4mrix5dfQSsSXI'] };
+  const PIN_WINDOW = { from: '2026-11-26', until: '2026-11-26', evening: false, ids: ['rec3p2A2JNn2ppULf', 'rec4mrix5dfQSsSXI'] };
   const shouldPin = todayIL >= PIN_WINDOW.from && todayIL <= PIN_WINDOW.until && (PIN_WINDOW.evening ? isEveningRun() : !isEveningRun());
 
   // 1. Fetch Airtable records
